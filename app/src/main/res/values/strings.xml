@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">BasicToDoApp</string>
+    <string name="add_task">Add  Task</string>
+    <string name="delete">delete</string>
+    <string name="update">update</string>
+    <string name="value">This is my name awais</string>
+    <string name="enter_task">Enter Task</string>
+    <string name="save">Save</string>
+</resources>
