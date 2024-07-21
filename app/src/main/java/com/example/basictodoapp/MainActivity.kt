@@ -4,95 +4,102 @@ import TaskViewModelFactory
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
-
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
 import android.widget.PopupWindow
-import androidx.lifecycle.Observer
-import androidx.lifecycle.LiveData
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
+import com.example.basictodoapp.databinding.ActivityMainBinding
 import com.example.basictodoapp.db.Task
 import com.example.basictodoapp.db.TaskDataBase
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
 
-    // Define the taskViewModel as a property of MainActivity
     private lateinit var taskViewModel: TaskViewModel
+    private lateinit var binding: ActivityMainBinding
+    private lateinit var popupWindow: PopupWindow
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
+        // Initialize ViewModel
         val taskDao = TaskDataBase.getDatabase(this).getTaskDao()
         val repository = Repository(taskDao)
         val viewModelFactory = TaskViewModelFactory(repository)
         taskViewModel = ViewModelProvider(this, viewModelFactory)[TaskViewModel::class.java]
 
-        val recycleView = findViewById<RecyclerView>(R.id.recycleView)
-
-        recycleView.layoutManager = LinearLayoutManager(this)
+        // Setup RecyclerView
+        binding.recycleView.layoutManager = LinearLayoutManager(this)
         taskViewModel.allTasks.observe(this, Observer { tasks ->
             val adapter = RvAdapter(
                 tasks,
-                onUpdateClick = { task ->
-                    taskViewModel.updateTask(task)
-                },
                 onDeleteClick = { task ->
                     taskViewModel.deleteTask(task)
                 }
             )
-            recycleView.adapter = adapter
+            binding.recycleView.adapter = adapter
         })
 
-        val btnAdd: Button = findViewById(R.id.btnAdd)
-        btnAdd.setOnClickListener {
-            showAddScreen()
+        binding.btnAdd.setOnClickListener {
+            val view = showAddScreen()
+            val btn = view.findViewById<Button>(R.id.save)
+            btn.setOnClickListener {
+                val newTask = handleAdd(view)
+                if (newTask != null) {
+                    taskViewModel.upsertTask(newTask)
+                    popupWindow.dismiss()
+                }
+            }
         }
+
+        val day = getCurrentDay()
+        val date = getCurrentDate()
+        binding.textViewDate.text = "$day, $date"
     }
 
-    private fun showAddScreen() {
+    private fun showAddScreen(): View {
         val inflater = getSystemService(LAYOUT_INFLATER_SERVICE) as LayoutInflater
         val popupView = inflater.inflate(R.layout.popup_layout, null)
         val width = ViewGroup.LayoutParams.MATCH_PARENT
         val height = ViewGroup.LayoutParams.WRAP_CONTENT
         val focusable = true
-        val popupWindow = PopupWindow(popupView, width, height, focusable)
-
+        popupWindow = PopupWindow(popupView, width, height, focusable)
         val rootView = findViewById<View>(android.R.id.content)
-        popupWindow.showAtLocation(rootView, android.view.Gravity.CENTER, 0, 0)
+        popupWindow.showAtLocation(rootView, android.view.Gravity.CENTER, 400, 23)
+        return popupView
+    }
 
-        val btnSave: Button = popupView.findViewById(R.id.save)
-        btnSave.setOnClickListener {
-
-            if(handleSave(popupView))
-            {
-                popupWindow.dismiss()
-
-            }
-            else
-            {
-                Toast.makeText(this, "Task cannot be empty", Toast.LENGTH_SHORT).show()
-            }
+    private fun handleAdd(popupView: View): Task? {
+        val editTextTask: EditText = popupView.findViewById(R.id.editTextAddTask)
+        val taskText = editTextTask.text.toString()
+        return if (taskText.isNotEmpty()) {
+            Task(task = taskText)
+        } else {
+            Toast.makeText(this, "Task cannot be empty", Toast.LENGTH_SHORT).show()
+            null
         }
     }
 
-    private fun handleSave(popupView: View):Boolean {
-        var istrue=false;
-        val editTextTask: EditText = popupView.findViewById(R.id.editTextAddTask)
-        val taskText = editTextTask.text.toString()
-        if (taskText.isNotEmpty()) {
-            val newTask = Task(id = 0, task = taskText, status = 0)
-            taskViewModel.upsertTask(newTask)
-            istrue=true
-        } else {
 
-            Toast.makeText(this, "Task cannot be empty", Toast.LENGTH_SHORT).show()
-        }
-        return istrue
+    private fun getCurrentDay(): String {
+        val calendar = Calendar.getInstance()
+        val daysOfWeek = arrayOf(
+            "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"
+        )
+        return daysOfWeek[calendar.get(Calendar.DAY_OF_WEEK) - 1]
+    }
+
+    private fun getCurrentDate(): String {
+        val dateFormat = SimpleDateFormat("dd MMMM yyyy", Locale.getDefault())
+        return dateFormat.format(Calendar.getInstance().time)
     }
 }

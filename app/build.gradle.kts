@@ -1,8 +1,9 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
+    alias(libs.plugins.ksp)
 
-    
+
 }
 
 android {
@@ -72,6 +73,8 @@ dependencies {
 
     // Saved state module for ViewModel
     implementation(libs.androidx.lifecycle.viewmodel.savedstate)
+    ksp(libs.room.compiler) // Add this line for Room with KSP
+
 
 
 

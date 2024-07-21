@@ -8,5 +8,4 @@ data class Task(
     @PrimaryKey(autoGenerate = true)
     val id:Int=0,
     val task:String,
-    val status:Int
 )
